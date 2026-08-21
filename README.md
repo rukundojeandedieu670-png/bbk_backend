@@ -21,6 +21,25 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Deployment (Render + Aiven)
+
+This API deploys to Render as a Docker web service using [Dockerfile](Dockerfile) at the repository root. The container runs nginx and PHP-FPM and uses Render's `PORT` value for its listening port.
+
+Set these environment variables in Render:
+
+- `APP_KEY`: generated Laravel application key
+- `APP_ENV=production`
+- `APP_DEBUG=false`
+- `APP_URL`: public API URL
+- `DB_CONNECTION`: `pgsql` or `mysql`
+- `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`: Aiven database credentials
+- `DB_SSLMODE=require` for Aiven PostgreSQL
+- `MYSQL_ATTR_SSL_CA`: committed, non-secret CA certificate path when required by Aiven MySQL
+- `FRONTEND_URL`: live Vercel frontend URL
+- `SANCTUM_STATEFUL_DOMAINS`: frontend domains used for stateful Sanctum authentication
+
+The startup script runs on every container start. It installs production Composer dependencies, makes Laravel's `storage/` and `bootstrap/cache/` directories writable, caches configuration and routes, and runs `php artisan migrate --force` automatically. Environment variables are therefore available before configuration is cached.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.

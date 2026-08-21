@@ -31,6 +31,14 @@ class AdminContentWorkflowController extends Controller
             abort_unless($user->can('publish-content'), 403);
         }
 
+        if ($data['status'] === 'published' && $content->status !== 'pending_review' && ! $user->hasRole('system-owner')) {
+            abort(422, 'Content must be pending review before it can be published.');
+        }
+
+        if ($data['status'] === 'pending_review') {
+            abort_unless($user->can('review-content'), 403);
+        }
+
         $before = ['status' => $content->status];
         $content->update([
             'status' => $data['status'],

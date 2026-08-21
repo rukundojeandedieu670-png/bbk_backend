@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\EventResource;
+use App\Http\Resources\HubResource;
+use App\Http\Resources\NewsPostResource;
+use App\Http\Resources\PartnerResource;
+use App\Http\Resources\ProgramResource;
+use App\Http\Resources\StoryResource;
+use App\Models\Event;
+use App\Models\Hub;
+use App\Models\NewsPost;
+use App\Models\Partner;
+use App\Models\Program;
+use App\Models\Story;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+
+class AdminContentController extends Controller
+{
+    public function index(Request $request, string $type): JsonResponse
+    {
+        $this->authorizeType($request, $type, 'view');
+        $model = $this->model($type);
+
+        return response()->json(['data' => $model::query()->latest()->paginate(25)]);
+    }
+
+    public function show(Request $request, string $type, int $id): JsonResponse
+    {
+        $this->authorizeType($request, $type, 'view');
+
+        return response()->json(['data' => $this->model($type)::query()->findOrFail($id)]);
+    }
+
+    public function store(Request $request, string $type): JsonResponse
+    {
+        $this->authorizeType($request, $type, 'create');
+        $data = $this->validated($request, $type);
+        $model = $this->model($type);
+        $record = $model::query()->create($data);
+
+        return response()->json(['data' => $record->fresh(), 'message' => 'Content created.'], 201);
+    }
+
+    public function update(Request $request, string $type, int $id): JsonResponse
+    {
+        $this->authorizeType($request, $type, 'update');
+        $record = $this->model($type)::query()->findOrFail($id);
+        $data = $this->validated($request, $type, $record->id);
+        $record->update($data);
+
+        return response()->json(['data' => $record->fresh(), 'message' => 'Content updated.']);
+    }
+
+    public function destroy(Request $request, string $type, int $id): JsonResponse
+    {
+        $this->authorizeType($request, $type, 'delete');
+        $record = $this->model($type)::query()->findOrFail($id);
+        $record->delete();
+
+        return response()->json(['message' => 'Content deleted.']);
+    }
+
+    private function model(string $type): string
+    {
+        return match ($type) {
+            'hubs' => Hub::class,
+            'programs' => Program::class,
+            'stories' => Story::class,
+            'events' => Event::class,
+            'partners' => Partner::class,
+            'news' => NewsPost::class,
+            default => abort(404),
+        };
+    }
+
+    private function authorizeType(Request $request, string $type, string $action): void
+    {
+        $user = $request->user();
+        $isOwner = $user->hasRole('system-owner');
+        $isAdmin = $user->hasRole('admin');
+        $isPublisher = $user->hasRole('publisher');
+
+        if ($type === 'hubs' || $type === 'partners') {
+            abort_unless($action === 'delete' ? $isOwner : ($isOwner || $isAdmin), 403);
+            return;
+        }
+
+        if ($action === 'view') {
+            abort_unless($isOwner || $isAdmin || $isPublisher, 403);
+            return;
+        }
+
+        if ($action === 'create' || $action === 'delete') {
+            abort_unless($isOwner || $isAdmin, 403);
+            return;
+        }
+
+        abort_unless($isOwner || $isAdmin || $isPublisher, 403);
+    }
+
+    private function validated(Request $request, string $type, ?int $ignoreId = null): array
+    {
+        $slugRule = 'unique:'.Str::plural($type).',slug'.($ignoreId ? ",{$ignoreId}" : '');
+
+        return match ($type) {
+            'hubs' => $this->mapHub($request->validate([
+                'name' => ['required', 'string', 'max:160'], 'slug' => ['nullable', 'string', 'max:180', $slugRule],
+                'district' => ['nullable', 'string', 'max:120'], 'description' => ['nullable', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'],
+                'latitude' => ['nullable', 'numeric', 'between:-90,90'], 'longitude' => ['nullable', 'numeric', 'between:-180,180'], 'isActive' => ['nullable', 'boolean'],
+            ])),
+            'programs' => $this->mapProgram($request->validate([
+                'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'hubId' => ['nullable', 'exists:hubs,id'],
+                'category' => ['required', 'in:sport,culture,entertainment,peace_building,storytelling'], 'summary' => ['nullable', 'string', 'max:1000'], 'body' => ['nullable', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'], 'isFeatured' => ['nullable', 'boolean'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'],
+            ])),
+            'stories' => $this->mapStory($request->validate([
+                'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'hubId' => ['nullable', 'exists:hubs,id'], 'programId' => ['nullable', 'exists:programs,id'], 'authorName' => ['required', 'string', 'max:160'], 'body' => ['required', 'string'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'], 'publishedAt' => ['nullable', 'date'],
+            ])),
+            'events' => $this->mapEvent($request->validate([
+                'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'hubId' => ['nullable', 'exists:hubs,id'], 'programId' => ['nullable', 'exists:programs,id'], 'eventType' => ['required', 'in:match,concert,screening,workshop,exhibition'], 'location' => ['required', 'string', 'max:255'], 'startsAt' => ['required', 'date'], 'endsAt' => ['nullable', 'date', 'after:startsAt'], 'description' => ['nullable', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'], 'isPublic' => ['nullable', 'boolean'],
+            ])),
+            'partners' => $this->mapPartner($request->validate([
+                'name' => ['required', 'string', 'max:180'], 'logo' => ['nullable', 'url', 'max:2000'], 'websiteUrl' => ['nullable', 'url', 'max:2000'], 'partnerType' => ['required', 'in:funder,implementing_partner,local_partner'], 'description' => ['nullable', 'string'],
+            ])),
+            'news' => $this->mapNews($request->validate([
+                'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'body' => ['required', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'], 'publishedAt' => ['nullable', 'date'],
+            ])),
+            default => abort(404),
+        };
+    }
+
+    private function mapHub(array $data): array { return ['name' => $data['name'], 'slug' => $data['slug'] ?? Str::slug($data['name']), 'district' => $data['district'] ?? null, 'description' => $data['description'] ?? null, 'cover_image' => $data['coverImage'] ?? null, 'lat' => $data['latitude'] ?? null, 'lng' => $data['longitude'] ?? null, 'is_active' => $data['isActive'] ?? true]; }
+    private function mapProgram(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'category' => $data['category'], 'summary' => $data['summary'] ?? null, 'body' => $data['body'] ?? null, 'cover_image' => $data['coverImage'] ?? null, 'is_featured' => $data['isFeatured'] ?? false, 'status' => $data['status'] ?? 'draft']; }
+    private function mapStory(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'program_id' => $data['programId'] ?? null, 'author_name' => $data['authorName'], 'body' => $data['body'], 'status' => $data['status'] ?? 'draft', 'published_at' => $data['publishedAt'] ?? null]; }
+    private function mapEvent(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'program_id' => $data['programId'] ?? null, 'event_type' => $data['eventType'], 'location' => $data['location'], 'starts_at' => $data['startsAt'], 'ends_at' => $data['endsAt'] ?? null, 'description' => $data['description'] ?? null, 'cover_image' => $data['coverImage'] ?? null, 'status' => $data['status'] ?? 'draft', 'is_public' => $data['isPublic'] ?? false]; }
+    private function mapPartner(array $data): array { return ['name' => $data['name'], 'logo' => $data['logo'] ?? null, 'website_url' => $data['websiteUrl'] ?? null, 'partner_type' => $data['partnerType'], 'description' => $data['description'] ?? null]; }
+    private function mapNews(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'body' => $data['body'], 'cover_image' => $data['coverImage'] ?? null, 'status' => $data['status'] ?? 'draft', 'published_at' => $data['publishedAt'] ?? null]; }
+}

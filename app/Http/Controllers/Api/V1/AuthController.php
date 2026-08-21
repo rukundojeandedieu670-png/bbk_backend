@@ -24,15 +24,7 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
-        return response()->json([
-            'token' => $user->createToken('admin-api')->plainTextToken,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'roles' => $user->getRoleNames()->values(),
-            ],
-        ]);
+        return response()->json(['token' => $user->createToken('admin-api')->plainTextToken, 'user' => $this->userPayload($user)]);
     }
 
     public function logout(Request $request): JsonResponse
@@ -46,11 +38,17 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        return response()->json([
+        return response()->json($this->userPayload($user));
+    }
+
+    private function userPayload($user): array
+    {
+        return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
             'roles' => $user->getRoleNames()->values(),
-        ]);
+            'permissions' => $user->getAllPermissions()->pluck('name')->values(),
+        ];
     }
 }

@@ -6,10 +6,14 @@ use App\Http\Controllers\Api\V1\InteractionController;
 use App\Http\Controllers\Api\V1\AdminInboxController;
 use App\Http\Controllers\Api\V1\AdminContentWorkflowController;
 use App\Http\Controllers\Api\V1\AdminMediaController;
+use App\Http\Controllers\Api\V1\AdminContentController;
+use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('health', [HealthController::class, 'show']);
+
 Route::prefix('v1')->group(function (): void {
-    Route::get('health', fn () => response()->json(['status' => 'ok']));
+    Route::get('health', [HealthController::class, 'show']);
     Route::get('hubs', [PublicContentController::class, 'hubs']);
     Route::get('hubs/{slug}', [PublicContentController::class, 'hub']);
     Route::get('programs', [PublicContentController::class, 'programs']);
@@ -35,6 +39,13 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->prefix('admin')->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        Route::prefix('content')->group(function (): void {
+            Route::get('{type}', [AdminContentController::class, 'index']);
+            Route::post('{type}', [AdminContentController::class, 'store']);
+            Route::get('{type}/{id}', [AdminContentController::class, 'show']);
+            Route::match(['put', 'patch'], '{type}/{id}', [AdminContentController::class, 'update']);
+            Route::delete('{type}/{id}', [AdminContentController::class, 'destroy']);
+        });
         Route::prefix('inbox')->middleware('permission:manage-inbox')->group(function (): void {
             Route::get('{type}', [AdminInboxController::class, 'index']);
             Route::patch('{type}/{id}', [AdminInboxController::class, 'updateStatus'])

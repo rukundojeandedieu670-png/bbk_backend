@@ -2,6 +2,8 @@
 
 This Laravel application is the JSON API for the BBK website. The frontend remains a separate Next.js application. The logo is the primary brand anchor: navy represents trust and the bridge, terracotta represents human warmth, and warm neutrals, gold, and restrained green support the sport, culture, and peace-building story.
 
+Staff role behavior is documented in `BBK_ROLES_AND_PERMISSIONS.md`; the API returns both role names and effective permissions from the authenticated profile endpoint.
+
 ## Delivery rules
 
 - Complete one phase before starting the next.

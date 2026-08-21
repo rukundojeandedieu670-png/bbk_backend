@@ -93,4 +93,29 @@ class InteractionTest extends TestCase
 
         $this->assertSame(2, AuditLog::count());
     }
+
+    public function test_publisher_cannot_skip_pending_review(): void
+    {
+        $publisher = User::factory()->create();
+        $publisher->assignRole(Role::findByName('publisher'));
+        $program = Program::factory()->create(['status' => 'draft']);
+
+        $this->actingAs($publisher, 'sanctum')
+            ->patchJson("/api/v1/admin/content/programs/{$program->id}/status", ['status' => 'published'])
+            ->assertUnprocessable();
+    }
+
+    public function test_profile_exposes_effective_role_permissions(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findByName('admin'));
+
+        $this->actingAs($admin, 'sanctum')
+            ->getJson('/api/v1/admin/auth/me')
+            ->assertOk()
+            ->assertJsonPath('roles.0', 'admin')
+            ->assertJsonFragment(['manage-programs'])
+            ->assertJsonFragment(['manage-inbox'])
+            ->assertJsonFragment(['review-content']);
+    }
 }
