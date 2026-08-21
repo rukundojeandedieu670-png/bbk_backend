@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\PublicContentController;
 use App\Http\Controllers\Api\V1\InteractionController;
 use App\Http\Controllers\Api\V1\AdminInboxController;
 use App\Http\Controllers\Api\V1\AdminContentWorkflowController;
+use App\Http\Controllers\Api\V1\AdminMediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -40,5 +41,9 @@ Route::prefix('v1')->group(function (): void {
                 ->middleware('role:system-owner|admin');
         });
         Route::patch('content/{type}/{id}/status', [AdminContentWorkflowController::class, 'updateStatus']);
+        Route::middleware('permission:manage-media')->group(function (): void {
+            Route::post('media/{type}/{id}', [AdminMediaController::class, 'store']);
+            Route::delete('media/{type}/{id}/{mediaId}', [AdminMediaController::class, 'destroy']);
+        });
     });
 });

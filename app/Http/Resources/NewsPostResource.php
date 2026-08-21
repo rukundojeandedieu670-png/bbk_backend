@@ -16,6 +16,7 @@ class NewsPostResource extends JsonResource
             'body' => $this->body,
             'coverImage' => $this->cover_image,
             'publishedAt' => $this->published_at?->toISOString(),
+            'media' => MediaAssetResource::collection($this->whenLoaded('media')),
         ];
     }
 }

@@ -18,6 +18,7 @@ class StoryResource extends JsonResource
             'publishedAt' => $this->published_at?->toISOString(),
             'hub' => new HubResource($this->whenLoaded('hub')),
             'program' => new ProgramResource($this->whenLoaded('program')),
+            'media' => MediaAssetResource::collection($this->whenLoaded('media')),
         ];
     }
 }

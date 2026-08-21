@@ -16,6 +16,7 @@ class PartnerResource extends JsonResource
             'websiteUrl' => $this->website_url,
             'partnerType' => $this->partner_type,
             'description' => $this->description,
+            'media' => MediaAssetResource::collection($this->whenLoaded('media')),
         ];
     }
 }

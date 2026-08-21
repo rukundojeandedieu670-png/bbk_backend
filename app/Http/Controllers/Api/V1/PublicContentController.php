@@ -34,7 +34,7 @@ class PublicContentController extends Controller
     public function programs(): AnonymousResourceCollection
     {
         $programs = Program::query()
-            ->with('hub')
+            ->with(['hub', 'media'])
             ->where('status', 'published')
             ->when(request('category'), fn ($query, $category) => $query->where('category', $category))
             ->when(request('hub'), fn ($query, $hub) => $query->whereHas('hub', fn ($hubQuery) => $hubQuery->where('slug', $hub)))
@@ -48,7 +48,7 @@ class PublicContentController extends Controller
     public function program(string $slug): ProgramResource
     {
         return new ProgramResource(Program::query()
-            ->with('hub')
+            ->with(['hub', 'media'])
             ->where('status', 'published')
             ->where('slug', $slug)
             ->firstOrFail());
@@ -57,7 +57,7 @@ class PublicContentController extends Controller
     public function stories(): AnonymousResourceCollection
     {
         return StoryResource::collection(Story::query()
-            ->with(['hub', 'program'])
+            ->with(['hub', 'program', 'media'])
             ->where('status', 'published')
             ->when(request('hub'), fn ($query, $hub) => $query->whereHas('hub', fn ($hubQuery) => $hubQuery->where('slug', $hub)))
             ->latest('published_at')
@@ -68,7 +68,7 @@ class PublicContentController extends Controller
     public function story(string $slug): StoryResource
     {
         return new StoryResource(Story::query()
-            ->with(['hub', 'program'])
+            ->with(['hub', 'program', 'media'])
             ->where('status', 'published')
             ->where('slug', $slug)
             ->firstOrFail());
@@ -77,7 +77,7 @@ class PublicContentController extends Controller
     public function events(): AnonymousResourceCollection
     {
         return EventResource::collection(Event::query()
-            ->with(['hub', 'program'])
+            ->with(['hub', 'program', 'media'])
             ->where('status', 'published')
             ->where('is_public', true)
             ->when(request('hub'), fn ($query, $hub) => $query->whereHas('hub', fn ($hubQuery) => $hubQuery->where('slug', $hub)))
@@ -89,7 +89,7 @@ class PublicContentController extends Controller
     public function event(string $slug): EventResource
     {
         return new EventResource(Event::query()
-            ->with(['hub', 'program'])
+            ->with(['hub', 'program', 'media'])
             ->where('status', 'published')
             ->where('is_public', true)
             ->where('slug', $slug)
@@ -98,12 +98,13 @@ class PublicContentController extends Controller
 
     public function partners(): AnonymousResourceCollection
     {
-        return PartnerResource::collection(Partner::query()->orderBy('name')->paginate(24));
+        return PartnerResource::collection(Partner::query()->with('media')->orderBy('name')->paginate(24));
     }
 
     public function news(): AnonymousResourceCollection
     {
         return NewsPostResource::collection(NewsPost::query()
+            ->with('media')
             ->where('status', 'published')
             ->latest('published_at')
             ->paginate(12)
@@ -113,6 +114,7 @@ class PublicContentController extends Controller
     public function newsPost(string $slug): NewsPostResource
     {
         return new NewsPostResource(NewsPost::query()
+            ->with('media')
             ->where('status', 'published')
             ->where('slug', $slug)
             ->firstOrFail());

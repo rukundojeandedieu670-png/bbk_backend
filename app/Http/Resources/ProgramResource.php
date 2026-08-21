@@ -20,6 +20,7 @@ class ProgramResource extends JsonResource
             'coverImage' => $this->cover_image,
             'isFeatured' => $this->is_featured,
             'hub' => new HubResource($this->whenLoaded('hub')),
+            'media' => MediaAssetResource::collection($this->whenLoaded('media')),
         ];
     }
 }

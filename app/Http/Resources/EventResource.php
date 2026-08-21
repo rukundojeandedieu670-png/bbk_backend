@@ -21,6 +21,7 @@ class EventResource extends JsonResource
             'coverImage' => $this->cover_image,
             'hub' => new HubResource($this->whenLoaded('hub')),
             'program' => new ProgramResource($this->whenLoaded('program')),
+            'media' => MediaAssetResource::collection($this->whenLoaded('media')),
         ];
     }
 }
