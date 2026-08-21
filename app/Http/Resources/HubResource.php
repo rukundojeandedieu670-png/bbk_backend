@@ -18,6 +18,7 @@ class HubResource extends JsonResource
             'coverImage' => $this->cover_image,
             'latitude' => $this->lat,
             'longitude' => $this->lng,
+            'media' => MediaAssetResource::collection($this->whenLoaded('media')),
         ];
     }
 }

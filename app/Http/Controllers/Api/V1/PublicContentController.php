@@ -22,13 +22,13 @@ class PublicContentController extends Controller
     public function hubs(): AnonymousResourceCollection
     {
         return HubResource::collection(
-            Hub::query()->where('is_active', true)->orderBy('name')->paginate(12),
+            Hub::query()->with('media')->where('is_active', true)->orderBy('name')->paginate(12),
         );
     }
 
     public function hub(string $slug): HubResource
     {
-        return new HubResource(Hub::query()->where('is_active', true)->where('slug', $slug)->firstOrFail());
+        return new HubResource(Hub::query()->with('media')->where('is_active', true)->where('slug', $slug)->firstOrFail());
     }
 
     public function programs(): AnonymousResourceCollection
