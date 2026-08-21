@@ -1,4 +1,4 @@
-FROM richarvey/nginx-php-fpm:latest
+FROM tangramor/nginx-php8-fpm:php8.3.6_withoutNodejs
 
 COPY . .
 
