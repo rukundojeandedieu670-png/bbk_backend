@@ -30,7 +30,9 @@ services:
       - key: DB_SSLMODE
         value: require
       - key: FRONTEND_URL
-        sync: false
+        value: https://bbk-flame.vercel.app
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://bbk-flame.vercel.app
       - key: SANCTUM_STATEFUL_DOMAINS
         sync: false
       - key: FILESYSTEM_DISK
@@ -44,4 +46,10 @@ services:
       - key: AWS_BUCKET
         sync: false
       - key: AWS_ENDPOINT
+        sync: false
+      - key: BBK_OWNER_NAME
+        value: BBK System Owner
+      - key: BBK_OWNER_EMAIL
+        sync: false
+      - key: BBK_OWNER_PASSWORD
         sync: false
