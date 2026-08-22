@@ -1,15 +1,30 @@
-FROM tangramor/nginx-php8-fpm:php8.3.6_withoutNodejs
+FROM php:8.3-fpm-alpine
+
+RUN apk add --no-cache \
+        nginx \
+        bash \
+        libpng-dev \
+        libzip-dev \
+        oniguruma-dev \
+        icu-dev \
+        postgresql-dev \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql mbstring zip exif pcntl bcmath gd intl
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
 
 COPY . .
 
-ENV SKIP_COMPOSER=1 \
-    WEBROOT=/var/www/html/public \
-    PHP_ERRORS_STDERR=1 \
-    RUN_SCRIPTS=1 \
-    REAL_IP_HEADER=1 \
-    APP_ENV=production \
-    APP_DEBUG=false \
-    LOG_CHANNEL=stderr \
-    COMPOSER_ALLOW_SUPERUSER=1
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/start.sh /start.sh
+RUN chmod +x /start.sh
+
+EXPOSE 10000
 
 CMD ["/start.sh"]

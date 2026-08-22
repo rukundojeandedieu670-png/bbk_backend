@@ -23,7 +23,7 @@ Laravel is accessible, powerful, and provides tools required for large, robust a
 
 ## Deployment (Render + Aiven)
 
-This API deploys to Render as a Docker web service using [Dockerfile](Dockerfile) at the repository root. The container runs nginx and PHP-FPM and uses Render's `PORT` value for its listening port.
+This API deploys to Render as a Docker web service using [Dockerfile](Dockerfile) at the repository root. The image is built from the official `php:8.3-fpm-alpine` image. nginx configuration is explicit in [docker/nginx.conf](docker/nginx.conf), and the PHP-FPM/nginx startup sequence is explicit in [docker/start.sh](docker/start.sh). The container listens on port `10000`, matching the Render health check.
 
 Set these environment variables in Render:
 
@@ -38,7 +38,7 @@ Set these environment variables in Render:
 - `FRONTEND_URL`: live Vercel frontend URL
 - `SANCTUM_STATEFUL_DOMAINS`: frontend domains used for stateful Sanctum authentication
 
-The startup script runs on every container start. It installs production Composer dependencies, makes Laravel's `storage/` and `bootstrap/cache/` directories writable, caches configuration and routes, and runs `php artisan migrate --force` automatically. Environment variables are therefore available before configuration is cached.
+Composer production dependencies are installed at image build time by the Dockerfile. On container start, `docker/start.sh` only caches configuration, caches routes, runs `php artisan migrate --force`, starts PHP-FPM, and starts nginx. Required environment variables are therefore available before configuration is cached and migrations run.
 
 ## Learning Laravel
 
