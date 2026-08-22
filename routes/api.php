@@ -8,9 +8,22 @@ use App\Http\Controllers\Api\V1\AdminContentWorkflowController;
 use App\Http\Controllers\Api\V1\AdminMediaController;
 use App\Http\Controllers\Api\V1\AdminContentController;
 use App\Http\Controllers\Api\V1\HealthController;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
 Route::get('health', [HealthController::class, 'show']);
+
+Route::get('run-setup', function () {
+    Artisan::call('migrate:fresh', [
+        '--seed' => true,
+        '--force' => true,
+    ]);
+
+    return response()->json([
+        'message' => 'Database setup completed successfully.',
+        'output' => Artisan::output(),
+    ]);
+});
 
 Route::prefix('v1')->group(function (): void {
     Route::get('health', [HealthController::class, 'show']);
