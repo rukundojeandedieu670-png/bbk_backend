@@ -40,6 +40,21 @@ class MediaUploadTest extends TestCase
         $this->assertSame($hub->id, $asset->mediable_id);
     }
 
+    public function test_admin_can_upload_a_photo_using_photo_field_name(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findByName('admin'));
+        $hub = Hub::factory()->create();
+
+        $response = $this->actingAs($admin, 'sanctum')->post("/api/v1/admin/media/hubs/{$hub->id}", [
+            'photo' => UploadedFile::fake()->image('hub-photo.jpg'),
+            'altText' => 'Photo upload test',
+        ]);
+
+        $response->assertCreated()->assertJsonPath('data.type', 'image');
+        $this->assertDatabaseHas('media_assets', ['mediable_type' => Hub::class, 'mediable_id' => $hub->id]);
+    }
+
     public function test_publisher_cannot_upload_media(): void
     {
         $publisher = User::factory()->create();

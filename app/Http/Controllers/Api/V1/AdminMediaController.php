@@ -17,18 +17,36 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminMediaController extends Controller
 {
+    public function show(int $id)
+    {
+        $asset = MediaAsset::query()->findOrFail($id);
+
+        return Storage::disk($asset->disk)->response($asset->object_key);
+    }
+
     public function store(Request $request, string $type, int $id): JsonResponse
     {
+        $fileInput = $request->file('file') ?: $request->file('image') ?: $request->file('photo') ?: $request->file('media');
+
         $data = $request->validate([
-            'file' => ['required', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'file' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'image' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'photo' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'media' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
             'altText' => ['nullable', 'string', 'max:255'],
             'sortOrder' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ]);
 
+        $file = $fileInput ?? $data['file'] ?? $data['image'] ?? $data['photo'] ?? $data['media'];
+
+        abort_unless($file instanceof \Illuminate\Http\UploadedFile, 422, 'A valid photo or video file is required.');
+
         $parent = $this->parent($type, $id);
-        $file = $data['file'];
         $mediaType = str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
         $disk = (string) config('filesystems.default');
+        if ($disk === 'local') {
+            $disk = 'public';
+        }
         $key = $file->store("media/{$type}/{$parent->getKey()}", $disk);
 
         abort_if($key === false, 500, 'The media file could not be stored.');

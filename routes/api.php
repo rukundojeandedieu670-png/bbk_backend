@@ -27,6 +27,8 @@ Route::get('run-setup', function () {
 
 Route::prefix('v1')->group(function (): void {
     Route::get('health', [HealthController::class, 'show']);
+    Route::get('site-settings', [\App\Http\Controllers\Api\V1\SiteSettingsController::class, 'index']);
+    Route::get('announcements/active', [\App\Http\Controllers\Api\V1\AnnouncementController::class, 'active']);
     Route::get('hubs', [PublicContentController::class, 'hubs']);
     Route::get('hubs/{slug}', [PublicContentController::class, 'hub']);
     Route::get('programs', [PublicContentController::class, 'programs']);
@@ -38,6 +40,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('partners', [PublicContentController::class, 'partners']);
     Route::get('news', [PublicContentController::class, 'news']);
     Route::get('news/{slug}', [PublicContentController::class, 'newsPost']);
+    Route::get('media/{id}', [AdminMediaController::class, 'show']);
 
     Route::prefix('interactions')->middleware('throttle:public-interactions')->group(function (): void {
         Route::post('volunteer', [InteractionController::class, 'volunteer']);
@@ -52,6 +55,11 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->prefix('admin')->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        Route::middleware('permission:manage-system-settings')->group(function (): void {
+            Route::get('site-settings', [\App\Http\Controllers\Api\V1\SiteSettingsController::class, 'index']);
+            Route::put('site-settings', [\App\Http\Controllers\Api\V1\SiteSettingsController::class, 'update']);
+            Route::apiResource('announcements', \App\Http\Controllers\Api\V1\AnnouncementController::class);
+        });
         Route::prefix('content')->group(function (): void {
             Route::get('{type}', [AdminContentController::class, 'index']);
             Route::post('{type}', [AdminContentController::class, 'store']);
