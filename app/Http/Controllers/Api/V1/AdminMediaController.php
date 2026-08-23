@@ -33,16 +33,29 @@ class AdminMediaController extends Controller
 
         abort_if($key === false, 500, 'The media file could not be stored.');
 
+        $url = $this->resolveDiskUrl($disk, $key);
+
         $asset = $parent->media()->create([
             'type' => $mediaType,
             'disk' => $disk,
             'object_key' => $key,
-            'url' => Storage::disk($disk)->url($key),
+            'url' => $url,
             'alt_text' => $data['altText'] ?? null,
             'sort_order' => $data['sortOrder'] ?? 0,
         ]);
 
         return (new MediaAssetResource($asset))->response()->setStatusCode(201);
+    }
+
+    private function resolveDiskUrl(string $disk, string $key): ?string
+    {
+        $storage = Storage::disk($disk);
+
+        if (method_exists($storage, 'url')) {
+            return $storage->url($key);
+        }
+
+        return null;
     }
 
     public function destroy(string $type, int $id, int $mediaId): JsonResponse

@@ -13,9 +13,24 @@ class MediaAssetResource extends JsonResource
         return [
             'id' => $this->id,
             'type' => $this->type,
-            'url' => $this->url ?: Storage::disk($this->disk)->url($this->object_key),
+            'url' => $this->url ?: $this->resolveUrl(),
             'altText' => $this->alt_text,
             'sortOrder' => $this->sort_order,
         ];
+    }
+
+    protected function resolveUrl(): ?string
+    {
+        if (! $this->disk || ! $this->object_key) {
+            return null;
+        }
+
+        $disk = Storage::disk($this->disk);
+
+        if (method_exists($disk, 'url')) {
+            return $disk->url($this->object_key);
+        }
+
+        return null;
     }
 }
