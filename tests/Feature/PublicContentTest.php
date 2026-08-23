@@ -26,6 +26,15 @@ class PublicContentTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_public_api_allows_current_vercel_origin(): void
+    {
+        Hub::factory()->create(['name' => 'Kiyovu', 'slug' => 'kiyovu']);
+
+        $this->getJson('/api/v1/hubs', ['Origin' => 'https://bbk-kigali.vercel.app'])
+            ->assertOk()
+            ->assertHeader('access-control-allow-origin', 'https://bbk-kigali.vercel.app');
+    }
+
     public function test_public_programs_include_published_programs_and_filter_by_hub(): void
     {
         $hub = Hub::factory()->create(['slug' => 'huye']);
