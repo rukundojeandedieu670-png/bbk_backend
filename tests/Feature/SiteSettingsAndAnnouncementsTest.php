@@ -70,6 +70,7 @@ class SiteSettingsAndAnnouncementsTest extends TestCase
     {
         $owner = User::factory()->create();
         $owner->assignRole(Role::findByName('system-owner'));
+        HomepageHero::query()->delete();
         $first = HomepageHero::create(['title' => 'First']);
         $second = HomepageHero::create(['title' => 'Second']);
 
@@ -80,6 +81,16 @@ class SiteSettingsAndAnnouncementsTest extends TestCase
         $this->getJson('/api/v1/homepage-hero')
             ->assertOk()
             ->assertJsonPath('data.0.title', 'Second');
+    }
+
+    public function test_content_seeder_creates_a_default_homepage_hero(): void
+    {
+        $this->seed(\Database\Seeders\ContentSeeder::class);
+
+        $this->assertDatabaseHas('homepage_heroes', [
+            'title' => 'Different lives. One shared field.',
+            'is_active' => true,
+        ]);
     }
 
     public function test_active_announcements_are_exposed_publicly_and_filter_by_time(): void

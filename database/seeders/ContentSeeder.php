@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Event;
 use App\Models\Hub;
+use App\Models\HomepageHero;
 use App\Models\NewsPost;
 use App\Models\Partner;
 use App\Models\Program;
@@ -14,6 +15,20 @@ class ContentSeeder extends Seeder
 {
     public function run(): void
     {
+        HomepageHero::updateOrCreate(
+            ['title' => 'Different lives. One shared field.'],
+            [
+                'eyebrow' => 'A national movement rooted in Rwanda',
+                'body' => 'Bridging Borders Kigali uses sport, culture and entertainment to rebuild trust between communities, migrants and refugees.',
+                'cta_label' => 'Discover the movement',
+                'cta_url' => '#approach',
+                'location' => 'Kiyovu / Huye',
+                'side' => 'left',
+                'sort_order' => 0,
+                'is_active' => true,
+            ],
+        );
+
         $kiyovu = Hub::updateOrCreate(
             ['slug' => 'kiyovu'],
             ['name' => 'Kiyovu', 'district' => 'Kigali', 'description' => 'A Kigali hub where sport and culture create space for connection.', 'is_active' => true],
