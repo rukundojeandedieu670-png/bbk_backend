@@ -44,9 +44,6 @@ class AdminMediaController extends Controller
         $parent = $this->parent($type, $id);
         $mediaType = str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
         $disk = (string) config('filesystems.default');
-        if ($disk === 'local') {
-            $disk = 'public';
-        }
         $key = $file->store("media/{$type}/{$parent->getKey()}", $disk);
 
         abort_if($key === false, 500, 'The media file could not be stored.');

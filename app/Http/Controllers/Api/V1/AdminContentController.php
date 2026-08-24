@@ -71,10 +71,9 @@ class AdminContentController extends Controller
         return response()->json(['message' => 'Content deleted.']);
     }
 
-    public function reorder(Request $request, string $type): JsonResponse
+    public function reorder(Request $request): JsonResponse
     {
-        abort_unless($type === 'hero', 404);
-        $this->authorizeType($request, $type, 'update');
+        $this->authorizeType($request, 'hero', 'update');
         $data = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer', 'distinct', 'exists:homepage_heroes,id']]);
 
         DB::transaction(function () use ($data): void {
