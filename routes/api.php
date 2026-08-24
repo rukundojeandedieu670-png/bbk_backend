@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\PublicContentController;
 use App\Http\Controllers\Api\V1\InteractionController;
 use App\Http\Controllers\Api\V1\AdminInboxController;
+use App\Http\Controllers\Api\V1\AdminUserController;
+use App\Http\Controllers\Api\V1\AdminAuditLogController;
 use App\Http\Controllers\Api\V1\AdminContentWorkflowController;
 use App\Http\Controllers\Api\V1\AdminMediaController;
 use App\Http\Controllers\Api\V1\AdminContentController;
@@ -55,6 +57,10 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware('auth:sanctum')->prefix('admin')->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        Route::apiResource('users', AdminUserController::class)->except(['show', 'create', 'edit'])
+            ->middleware('permission:manage-users');
+        Route::get('audit-log', [AdminAuditLogController::class, 'index'])
+            ->middleware('permission:view-audit-log');
         Route::middleware('permission:manage-system-settings')->group(function (): void {
             Route::get('site-settings', [\App\Http\Controllers\Api\V1\SiteSettingsController::class, 'index']);
             Route::put('site-settings', [\App\Http\Controllers\Api\V1\SiteSettingsController::class, 'update']);
@@ -69,8 +75,7 @@ Route::prefix('v1')->group(function (): void {
         });
         Route::prefix('inbox')->middleware('permission:manage-inbox')->group(function (): void {
             Route::get('{type}', [AdminInboxController::class, 'index']);
-            Route::patch('{type}/{id}', [AdminInboxController::class, 'updateStatus'])
-                ->middleware('role:system-owner|admin');
+            Route::patch('{type}/{id}', [AdminInboxController::class, 'updateStatus']);
         });
         Route::patch('content/{type}/{id}/status', [AdminContentWorkflowController::class, 'updateStatus']);
         Route::middleware('permission:manage-media')->group(function (): void {

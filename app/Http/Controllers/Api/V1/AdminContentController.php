@@ -81,26 +81,17 @@ class AdminContentController extends Controller
     private function authorizeType(Request $request, string $type, string $action): void
     {
         $user = $request->user();
-        $isOwner = $user->hasRole('system-owner');
-        $isAdmin = $user->hasRole('admin');
-        $isPublisher = $user->hasRole('publisher');
+        $permission = match ($type) {
+            'hubs' => 'manage-hubs',
+            'partners' => 'manage-partners',
+            'programs' => 'manage-programs',
+            'events' => 'manage-events',
+            'stories' => 'manage-stories',
+            'news' => 'manage-news',
+            default => abort(404),
+        };
 
-        if ($type === 'hubs' || $type === 'partners') {
-            abort_unless($action === 'delete' ? $isOwner : ($isOwner || $isAdmin), 403);
-            return;
-        }
-
-        if ($action === 'view') {
-            abort_unless($isOwner || $isAdmin || $isPublisher, 403);
-            return;
-        }
-
-        if ($action === 'create' || $action === 'delete') {
-            abort_unless($isOwner || $isAdmin, 403);
-            return;
-        }
-
-        abort_unless($isOwner || $isAdmin || $isPublisher, 403);
+        abort_unless($user->can($permission), 403);
     }
 
     private function validated(Request $request, string $type, ?int $ignoreId = null): array

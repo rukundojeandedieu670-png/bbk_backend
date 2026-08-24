@@ -52,7 +52,7 @@ class InteractionTest extends TestCase
         $this->assertSame('news@example.test', NewsletterSubscriber::first()->email);
     }
 
-    public function test_publisher_can_read_but_not_update_inbox_records(): void
+    public function test_publisher_can_read_and_update_inbox_records(): void
     {
         $publisher = User::factory()->create();
         $publisher->assignRole(Role::findByName('publisher'));
@@ -68,10 +68,10 @@ class InteractionTest extends TestCase
 
         $this->actingAs($publisher, 'sanctum')
             ->patchJson("/api/v1/admin/inbox/volunteers/{$application->id}", ['status' => 'reviewed'])
-            ->assertForbidden();
+            ->assertOk();
     }
 
-    public function test_admin_can_request_review_but_publisher_must_publish(): void
+    public function test_all_staff_roles_can_request_review_and_publish(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole(Role::findByName('admin'));
@@ -85,13 +85,13 @@ class InteractionTest extends TestCase
 
         $this->actingAs($admin, 'sanctum')
             ->patchJson("/api/v1/admin/content/programs/{$program->id}/status", ['status' => 'published'])
-            ->assertForbidden();
-
-        $this->actingAs($publisher, 'sanctum')
-            ->patchJson("/api/v1/admin/content/programs/{$program->id}/status", ['status' => 'published'])
             ->assertOk();
 
-        $this->assertSame(2, AuditLog::count());
+        $this->actingAs($publisher, 'sanctum')
+            ->patchJson("/api/v1/admin/content/programs/{$program->id}/status", ['status' => 'archived'])
+            ->assertOk();
+
+        $this->assertSame(3, AuditLog::count());
     }
 
     public function test_publisher_cannot_skip_pending_review(): void

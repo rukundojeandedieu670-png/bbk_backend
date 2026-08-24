@@ -38,7 +38,7 @@ class CrudAuthorizationTest extends TestCase
             ->assertOk();
     }
 
-    public function test_publisher_can_update_but_cannot_create_or_delete_content(): void
+    public function test_publisher_can_create_update_and_delete_content(): void
     {
         $publisher = User::factory()->create();
         $publisher->assignRole(Role::findByName('publisher'));
@@ -49,13 +49,13 @@ class CrudAuthorizationTest extends TestCase
             ->assertOk();
         $this->actingAs($publisher, 'sanctum')
             ->postJson('/api/v1/admin/content/programs', ['title' => 'Blocked', 'category' => 'sport'])
-            ->assertForbidden();
+            ->assertCreated();
         $this->actingAs($publisher, 'sanctum')
             ->deleteJson("/api/v1/admin/content/programs/{$program->id}")
-            ->assertForbidden();
+            ->assertOk();
     }
 
-    public function test_only_owner_can_delete_a_hub(): void
+    public function test_all_staff_roles_can_manage_hubs(): void
     {
         $admin = User::factory()->create();
         $admin->assignRole(Role::findByName('admin'));
@@ -65,9 +65,9 @@ class CrudAuthorizationTest extends TestCase
 
         $this->actingAs($admin, 'sanctum')
             ->deleteJson("/api/v1/admin/content/hubs/{$hub->id}")
-            ->assertForbidden();
-        $this->actingAs($owner, 'sanctum')
-            ->deleteJson("/api/v1/admin/content/hubs/{$hub->id}")
             ->assertOk();
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/v1/admin/content/hubs', ['name' => 'Huye', 'district' => 'Huye'])
+            ->assertCreated();
     }
 }

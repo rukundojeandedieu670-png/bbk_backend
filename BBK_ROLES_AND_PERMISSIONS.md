@@ -1,6 +1,6 @@
 # BBK Staff Roles
 
-The API uses bearer tokens with three staff roles. A user should have one primary role. Permissions are returned by `GET /api/v1/admin/auth/me` so an admin frontend can show only actions the current user can perform.
+The API uses bearer tokens with three staff roles. Every staff role receives the full capability set so the frontend can expose the complete admin workspace to any authenticated staff user. Permissions are returned by `GET /api/v1/admin/auth/me`.
 
 ## System Owner
 
@@ -11,28 +11,15 @@ The technical and organizational owner. Has every permission.
 - View audit logs.
 - Only another System Owner may remove a System Owner account.
 
-## Admin
+## Admin and Publisher
 
-The operational content manager.
-
-- Manage programs, events, stories, news, media, and inbox records.
-- Edit hubs and partners, but hub/partner deletion remains an owner-only action.
-- Move managed content between `draft` and `pending_review`.
-- Cannot publish, archive, manage users, change system settings, or view audit logs.
-
-## Publisher
-
-The final editorial gate.
-
-- View inbox records read-only.
-- Review content and publish or archive content that has reached `pending_review`.
-- Cannot create structural records, manage media, manage users, change settings, or edit inbox records.
+These operational roles have the same API capabilities as the System Owner. They can manage all content, media, inbox records, users, settings, publication workflow, and audit history through the frontend.
 
 ## Content state rules
 
-1. Admin creates or edits content as `draft`.
-2. Admin requests review by moving `draft` to `pending_review`.
-3. Publisher or System Owner moves `pending_review` to `published`.
-4. Publisher or System Owner may move published content to `archived`.
+1. Any authenticated staff role may create or edit content.
+2. Any authenticated staff role may move content to `pending_review`.
+3. Any authenticated staff role may publish content that is `pending_review`.
+4. Any authenticated staff role may move published content to `archived`.
 
 The server enforces these transitions; the frontend must not rely on hiding buttons as its security boundary.

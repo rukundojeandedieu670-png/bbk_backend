@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 
 class SiteSettingsController extends Controller
 {
+    private const FONT_PAIRINGS = ['athletic', 'bold', 'classic'];
+
     public function index(): JsonResponse
     {
         return response()->json([
@@ -26,7 +28,10 @@ class SiteSettingsController extends Controller
             'background_color' => ['nullable', 'string', 'max:20'],
             'accent_color' => ['nullable', 'string', 'max:20'],
             'secondary_accent_color' => ['nullable', 'string', 'max:20'],
-            'font_pairing' => ['nullable', 'string', 'max:255'],
+            'theme_primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'theme_secondary_accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'font_pairing' => ['nullable', 'in:'.implode(',', self::FONT_PAIRINGS)],
             'social_facebook_url' => ['nullable', 'url', 'max:255'],
             'social_twitter_url' => ['nullable', 'url', 'max:255'],
             'social_whatsapp_number' => ['nullable', 'string', 'max:30'],
@@ -36,6 +41,9 @@ class SiteSettingsController extends Controller
             'social_tiktok_url' => ['nullable', 'url', 'max:255'],
             'developer_credit_name' => ['nullable', 'string', 'max:255'],
             'developer_credit_url' => ['nullable', 'url', 'max:255'],
+            'impact_people_impacted' => ['nullable', 'string', 'max:50'],
+            'impact_youth_trained' => ['nullable', 'string', 'max:50'],
+            'impact_satisfaction_rate' => ['nullable', 'string', 'max:50'],
         ]);
 
         foreach ($data as $key => $value) {

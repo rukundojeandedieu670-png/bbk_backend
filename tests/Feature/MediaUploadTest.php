@@ -55,7 +55,7 @@ class MediaUploadTest extends TestCase
         $this->assertDatabaseHas('media_assets', ['mediable_type' => Hub::class, 'mediable_id' => $hub->id]);
     }
 
-    public function test_publisher_cannot_upload_media(): void
+    public function test_publisher_can_upload_media(): void
     {
         $publisher = User::factory()->create();
         $publisher->assignRole(Role::findByName('publisher'));
@@ -63,7 +63,7 @@ class MediaUploadTest extends TestCase
 
         $this->actingAs($publisher, 'sanctum')
             ->post("/api/v1/admin/media/hubs/{$hub->id}", ['file' => UploadedFile::fake()->image('blocked.jpg')])
-            ->assertForbidden();
+            ->assertCreated();
     }
 
     public function test_admin_can_delete_an_attached_media_asset(): void

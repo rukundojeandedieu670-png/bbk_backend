@@ -38,22 +38,8 @@ class RolePermissionSeeder extends Seeder
         $publisher = Role::findOrCreate('publisher', 'web');
 
         $owner->syncPermissions($permissions->all());
-        $admin->syncPermissions($permissions->only([
-            'manage-hubs',
-            'manage-partners',
-            'manage-programs',
-            'manage-events',
-            'manage-stories',
-            'manage-news',
-            'manage-media',
-            'manage-inbox',
-            'review-content',
-        ])->all());
-        $publisher->syncPermissions($permissions->only([
-            'manage-inbox',
-            'review-content',
-            'publish-content',
-        ])->all());
+        $admin->syncPermissions($permissions->all());
+        $publisher->syncPermissions($permissions->except('manage-system-settings')->all());
 
         $this->seedUser('BBK_OWNER_EMAIL', 'BBK_OWNER_PASSWORD', 'BBK_OWNER_NAME', 'BBK System Owner', $owner);
         $this->seedUser('BBK_ADMIN_EMAIL', 'BBK_ADMIN_PASSWORD', 'BBK_ADMIN_NAME', 'BBK Content Admin', $admin);
