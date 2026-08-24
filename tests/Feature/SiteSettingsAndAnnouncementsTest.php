@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Announcement;
+use App\Models\HomepageHero;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -26,6 +27,7 @@ class SiteSettingsAndAnnouncementsTest extends TestCase
         $this->actingAs($owner, 'sanctum')
             ->putJson('/api/v1/admin/site-settings', [
                 'site_name' => 'Bridging Borders Kigali',
+                'hero_background_image' => 'https://example.com/images/community-field.jpg',
                 'theme_primary_color' => '#1B2A57',
                 'theme_accent_color' => '#E8571F',
                 'theme_secondary_accent_color' => '#F2A93B',
@@ -44,6 +46,7 @@ class SiteSettingsAndAnnouncementsTest extends TestCase
         $this->getJson('/api/v1/site-settings')
             ->assertOk()
             ->assertJsonPath('data.site_name', 'Bridging Borders Kigali')
+            ->assertJsonPath('data.hero_background_image', 'https://example.com/images/community-field.jpg')
             ->assertJsonPath('data.theme_primary_color', '#1B2A57')
             ->assertJsonPath('data.social_whatsapp_number', '+250788123456')
             ->assertJsonPath('data.impact_people_impacted', '2k+')
@@ -61,6 +64,22 @@ class SiteSettingsAndAnnouncementsTest extends TestCase
                 'impact_people_impacted' => '2k+',
             ])
             ->assertForbidden();
+    }
+
+    public function test_system_owner_can_manage_and_reorder_homepage_heroes(): void
+    {
+        $owner = User::factory()->create();
+        $owner->assignRole(Role::findByName('system-owner'));
+        $first = HomepageHero::create(['title' => 'First']);
+        $second = HomepageHero::create(['title' => 'Second']);
+
+        $this->actingAs($owner, 'sanctum')
+            ->postJson('/api/v1/admin/content/hero/reorder', ['ids' => [$second->id, $first->id]])
+            ->assertOk();
+
+        $this->getJson('/api/v1/homepage-hero')
+            ->assertOk()
+            ->assertJsonPath('data.0.title', 'Second');
     }
 
     public function test_active_announcements_are_exposed_publicly_and_filter_by_time(): void

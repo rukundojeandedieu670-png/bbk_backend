@@ -11,6 +11,7 @@ use App\Http\Resources\ProgramResource;
 use App\Http\Resources\StoryResource;
 use App\Models\Event;
 use App\Models\Hub;
+use App\Models\HomepageHero;
 use App\Models\NewsPost;
 use App\Models\Partner;
 use App\Models\Program;
@@ -18,6 +19,7 @@ use App\Models\Story;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class AdminContentController extends Controller
 {
@@ -26,7 +28,11 @@ class AdminContentController extends Controller
         $this->authorizeType($request, $type, 'view');
         $model = $this->model($type);
 
-        return response()->json(['data' => $model::query()->latest()->paginate(25)]);
+        $query = $model::query();
+        if ($type === 'hero') $query->orderBy('side')->orderBy('sort_order')->orderBy('id');
+        else $query->latest();
+
+        return response()->json(['data' => $query->paginate(25)]);
     }
 
     public function show(Request $request, string $type, int $id): JsonResponse
@@ -65,6 +71,19 @@ class AdminContentController extends Controller
         return response()->json(['message' => 'Content deleted.']);
     }
 
+    public function reorder(Request $request, string $type): JsonResponse
+    {
+        abort_unless($type === 'hero', 404);
+        $this->authorizeType($request, $type, 'update');
+        $data = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer', 'distinct', 'exists:homepage_heroes,id']]);
+
+        DB::transaction(function () use ($data): void {
+            foreach ($data['ids'] as $index => $id) HomepageHero::query()->whereKey($id)->update(['sort_order' => $index]);
+        });
+
+        return response()->json(['message' => 'Hero order updated.']);
+    }
+
     private function model(string $type): string
     {
         return match ($type) {
@@ -74,6 +93,7 @@ class AdminContentController extends Controller
             'events' => Event::class,
             'partners' => Partner::class,
             'news' => NewsPost::class,
+            'hero' => HomepageHero::class,
             default => abort(404),
         };
     }
@@ -88,6 +108,7 @@ class AdminContentController extends Controller
             'events' => 'manage-events',
             'stories' => 'manage-stories',
             'news' => 'manage-news',
+            'hero' => 'manage-system-settings',
             default => abort(404),
         };
 
@@ -120,6 +141,11 @@ class AdminContentController extends Controller
             'news' => $this->mapNews($request->validate([
                 'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'body' => ['required', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'], 'publishedAt' => ['nullable', 'date'],
             ])),
+            'hero' => $this->mapHero($request->validate([
+                'eyebrow' => ['nullable', 'string', 'max:255'], 'title' => ['required', 'string', 'max:255'], 'body' => ['nullable', 'string'],
+                'cta_label' => ['nullable', 'string', 'max:120'], 'cta_url' => ['nullable', 'string', 'max:2048'], 'image_url' => ['nullable', 'string', 'max:2048'],
+                'location' => ['nullable', 'string', 'max:255'], 'side' => ['nullable', 'in:left,right'], 'sort_order' => ['nullable', 'integer', 'min:0'], 'is_active' => ['nullable', 'boolean'],
+            ])),
             default => abort(404),
         };
     }
@@ -130,4 +156,5 @@ class AdminContentController extends Controller
     private function mapEvent(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'program_id' => $data['programId'] ?? null, 'event_type' => $data['eventType'], 'location' => $data['location'], 'starts_at' => $data['startsAt'], 'ends_at' => $data['endsAt'] ?? null, 'description' => $data['description'] ?? null, 'cover_image' => $data['coverImage'] ?? null, 'status' => $data['status'] ?? 'draft', 'is_public' => $data['isPublic'] ?? false]; }
     private function mapPartner(array $data): array { return ['name' => $data['name'], 'logo' => $data['logo'] ?? null, 'website_url' => $data['websiteUrl'] ?? null, 'partner_type' => $data['partnerType'], 'description' => $data['description'] ?? null]; }
     private function mapNews(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'body' => $data['body'], 'cover_image' => $data['coverImage'] ?? null, 'status' => $data['status'] ?? 'draft', 'published_at' => $data['publishedAt'] ?? null]; }
+    private function mapHero(array $data): array { return ['eyebrow' => $data['eyebrow'] ?? null, 'title' => $data['title'], 'body' => $data['body'] ?? null, 'cta_label' => $data['cta_label'] ?? null, 'cta_url' => $data['cta_url'] ?? null, 'image_url' => $data['image_url'] ?? null, 'location' => $data['location'] ?? null, 'side' => $data['side'] ?? 'left', 'sort_order' => $data['sort_order'] ?? 0, 'is_active' => $data['is_active'] ?? true]; }
 }

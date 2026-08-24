@@ -25,6 +25,7 @@ class SiteSettingsController extends Controller
         $data = $request->validate([
             'site_name' => ['nullable', 'string', 'max:255'],
             'logo_path' => ['nullable', 'string', 'max:255'],
+            'hero_background_image' => ['nullable', 'string', 'max:2048'],
             'background_color' => ['nullable', 'string', 'max:20'],
             'accent_color' => ['nullable', 'string', 'max:20'],
             'secondary_accent_color' => ['nullable', 'string', 'max:20'],

@@ -30,6 +30,7 @@ Route::get('run-setup', function () {
 Route::prefix('v1')->group(function (): void {
     Route::get('health', [HealthController::class, 'show']);
     Route::get('site-settings', [\App\Http\Controllers\Api\V1\SiteSettingsController::class, 'index']);
+    Route::get('homepage-hero', [PublicContentController::class, 'homepageHero']);
     Route::get('announcements/active', [\App\Http\Controllers\Api\V1\AnnouncementController::class, 'active']);
     Route::get('hubs', [PublicContentController::class, 'hubs']);
     Route::get('hubs/{slug}', [PublicContentController::class, 'hub']);
@@ -67,6 +68,7 @@ Route::prefix('v1')->group(function (): void {
             Route::apiResource('announcements', \App\Http\Controllers\Api\V1\AnnouncementController::class);
         });
         Route::prefix('content')->group(function (): void {
+            Route::post('hero/reorder', [AdminContentController::class, 'reorder']);
             Route::get('{type}', [AdminContentController::class, 'index']);
             Route::post('{type}', [AdminContentController::class, 'store']);
             Route::get('{type}/{id}', [AdminContentController::class, 'show']);

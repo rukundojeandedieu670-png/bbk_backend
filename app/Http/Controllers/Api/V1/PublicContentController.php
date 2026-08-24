@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\HubResource;
+use App\Http\Resources\HomepageHeroResource;
 use App\Http\Resources\ProgramResource;
 use App\Http\Resources\StoryResource;
 use App\Http\Resources\EventResource;
@@ -11,6 +12,7 @@ use App\Http\Resources\NewsPostResource;
 use App\Http\Resources\PartnerResource;
 use App\Models\Event;
 use App\Models\Hub;
+use App\Models\HomepageHero;
 use App\Models\Program;
 use App\Models\Story;
 use App\Models\NewsPost;
@@ -19,6 +21,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PublicContentController extends Controller
 {
+    public function homepageHero(): AnonymousResourceCollection
+    {
+        return HomepageHeroResource::collection(
+            HomepageHero::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->get(),
+        );
+    }
+
     public function hubs(): AnonymousResourceCollection
     {
         return HubResource::collection(
