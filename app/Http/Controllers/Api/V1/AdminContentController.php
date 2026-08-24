@@ -100,6 +100,7 @@ class AdminContentController extends Controller
     private function authorizeType(Request $request, string $type, string $action): void
     {
         $user = $request->user();
+        abort_unless($user, 401, 'Unauthenticated.');
         $permission = match ($type) {
             'hubs' => 'manage-hubs',
             'partners' => 'manage-partners',
