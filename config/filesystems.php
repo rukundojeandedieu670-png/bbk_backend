@@ -56,8 +56,8 @@ return [
             'url' => env('R2_URL', env('AWS_URL')),
             'endpoint' => env('R2_ENDPOINT', env('AWS_ENDPOINT')),
             'use_path_style_endpoint' => env('R2_USE_PATH_STYLE_ENDPOINT', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
-            'throw' => false,
-            'report' => false,
+            'throw' => true,
+            'report' => true,
         ],
 
     ],

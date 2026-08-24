@@ -13,7 +13,9 @@ use App\Models\Program;
 use App\Models\Story;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class AdminMediaController extends Controller
 {
@@ -44,9 +46,37 @@ class AdminMediaController extends Controller
         $parent = $this->parent($type, $id);
         $mediaType = str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
         $disk = (string) config('filesystems.default');
-        $key = $file->store("media/{$type}/{$parent->getKey()}", $disk);
+        if ($disk === 'local') {
+            $disk = 'public';
+        }
+        if (app()->environment('production') && $disk !== 's3') {
+            return response()->json([
+                'message' => 'Image uploads are not configured for R2 object storage. The record was saved without media.',
+                'error' => 'media_storage_misconfigured',
+            ], 503);
+        }
+        try {
+            $key = $file->store("media/{$type}/{$parent->getKey()}", $disk);
+        } catch (Throwable $exception) {
+            Log::error('Media upload failed.', [
+                'disk' => $disk,
+                'type' => $type,
+                'parent_id' => $parent->getKey(),
+                'error' => $exception->getMessage(),
+            ]);
 
-        abort_if($key === false, 500, 'The media file could not be stored.');
+            return response()->json([
+                'message' => 'The image could not be uploaded to object storage. The record was saved without media.',
+                'error' => 'media_storage_unavailable',
+            ], 503);
+        }
+
+        if ($key === false) {
+            return response()->json([
+                'message' => 'The image could not be uploaded to object storage. The record was saved without media.',
+                'error' => 'media_storage_unavailable',
+            ], 503);
+        }
 
         $url = $this->resolveDiskUrl($disk, $key);
 

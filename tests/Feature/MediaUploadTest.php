@@ -55,6 +55,23 @@ class MediaUploadTest extends TestCase
         $this->assertDatabaseHas('media_assets', ['mediable_type' => Hub::class, 'mediable_id' => $hub->id]);
     }
 
+    public function test_storage_failure_returns_a_clear_error_without_creating_media(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findByName('admin'));
+        $hub = Hub::factory()->create();
+        Storage::shouldReceive('disk')->with('s3')->andThrow(new \RuntimeException('R2 unavailable'));
+
+        $response = $this->actingAs($admin, 'sanctum')->post("/api/v1/admin/media/hubs/{$hub->id}", [
+            'file' => UploadedFile::fake()->image('hub-cover.jpg'),
+        ]);
+
+        $response->assertStatus(503)
+            ->assertJsonPath('error', 'media_storage_unavailable')
+            ->assertJsonPath('message', 'The image could not be uploaded to object storage. The record was saved without media.');
+        $this->assertDatabaseCount('media_assets', 0);
+    }
+
     public function test_publisher_can_upload_media(): void
     {
         $publisher = User::factory()->create();
