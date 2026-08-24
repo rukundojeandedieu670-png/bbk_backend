@@ -72,6 +72,41 @@ class MediaUploadTest extends TestCase
         $this->assertDatabaseCount('media_assets', 0);
     }
 
+    public function test_uploads_over_eight_megabytes_are_rejected_with_validation_error(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findByName('admin'));
+        $hub = Hub::factory()->create();
+
+        $this->actingAs($admin, 'sanctum')
+            ->post("/api/v1/admin/media/hubs/{$hub->id}", [
+                'file' => UploadedFile::fake()->create('large.jpg', 8193, 'image/jpeg'),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('file');
+    }
+
+    public function test_finalization_failure_returns_a_clear_error_and_cleans_up_media(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findByName('admin'));
+        $hub = Hub::factory()->create();
+
+        $this->partialMock(\App\Http\Controllers\Api\V1\AdminMediaController::class, function ($mock): void {
+            $mock->shouldAllowMockingProtectedMethods()
+                ->shouldReceive('resolveDiskUrl')
+                ->andThrow(new \RuntimeException('URL generation failed'));
+        });
+
+        $response = $this->actingAs($admin, 'sanctum')->post("/api/v1/admin/media/hubs/{$hub->id}", [
+            'file' => UploadedFile::fake()->image('hub-cover.jpg'),
+        ]);
+
+        $response->assertStatus(500)
+            ->assertJsonPath('error', 'media_finalization_failed');
+        $this->assertDatabaseCount('media_assets', 0);
+    }
+
     public function test_publisher_can_upload_media(): void
     {
         $publisher = User::factory()->create();

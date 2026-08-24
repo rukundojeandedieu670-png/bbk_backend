@@ -19,6 +19,8 @@ use Throwable;
 
 class AdminMediaController extends Controller
 {
+    private const MAX_UPLOAD_KB = 8192;
+
     public function show(int $id)
     {
         $asset = MediaAsset::query()->findOrFail($id);
@@ -31,10 +33,10 @@ class AdminMediaController extends Controller
         $fileInput = $request->file('file') ?: $request->file('image') ?: $request->file('photo') ?: $request->file('media');
 
         $data = $request->validate([
-            'file' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
-            'image' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
-            'photo' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
-            'media' => ['nullable', 'file', 'max:51200', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'file' => ['nullable', 'file', 'max:'.self::MAX_UPLOAD_KB, 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'image' => ['nullable', 'file', 'max:'.self::MAX_UPLOAD_KB, 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'photo' => ['nullable', 'file', 'max:'.self::MAX_UPLOAD_KB, 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
+            'media' => ['nullable', 'file', 'max:'.self::MAX_UPLOAD_KB, 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime'],
             'altText' => ['nullable', 'string', 'max:255'],
             'sortOrder' => ['nullable', 'integer', 'min:0', 'max:9999'],
         ]);
@@ -59,10 +61,16 @@ class AdminMediaController extends Controller
             $key = $file->store("media/{$type}/{$parent->getKey()}", $disk);
         } catch (Throwable $exception) {
             Log::error('Media upload failed.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
                 'disk' => $disk,
                 'type' => $type,
                 'parent_id' => $parent->getKey(),
-                'error' => $exception->getMessage(),
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
             ]);
 
             return response()->json([
@@ -78,21 +86,54 @@ class AdminMediaController extends Controller
             ], 503);
         }
 
-        $url = $this->resolveDiskUrl($disk, $key);
+        $asset = null;
+        try {
+            $url = $this->resolveDiskUrl($disk, $key);
 
-        $asset = $parent->media()->create([
-            'type' => $mediaType,
-            'disk' => $disk,
-            'object_key' => $key,
-            'url' => $url,
-            'alt_text' => $data['altText'] ?? null,
-            'sort_order' => $data['sortOrder'] ?? 0,
-        ]);
+            $asset = $parent->media()->create([
+                'type' => $mediaType,
+                'disk' => $disk,
+                'object_key' => $key,
+                'url' => $url,
+                'alt_text' => $data['altText'] ?? null,
+                'sort_order' => $data['sortOrder'] ?? 0,
+            ]);
 
-        return (new MediaAssetResource($asset))->response()->setStatusCode(201);
+            return (new MediaAssetResource($asset))->response()->setStatusCode(201);
+        } catch (Throwable $exception) {
+            Log::error('Media upload finalization failed.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+                'disk' => $disk,
+                'type' => $type,
+                'parent_id' => $parent->getKey(),
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'mime_type' => $file->getMimeType(),
+            ]);
+
+            $asset?->delete();
+            try {
+                Storage::disk($disk)->delete($key);
+            } catch (Throwable $cleanupException) {
+                Log::warning('Failed to clean up media object after finalization failure.', [
+                    'exception' => $cleanupException::class,
+                    'message' => $cleanupException->getMessage(),
+                    'disk' => $disk,
+                    'object_key' => $key,
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'The image was uploaded but could not be linked to the saved record.',
+                'error' => 'media_finalization_failed',
+            ], 500);
+        }
     }
 
-    private function resolveDiskUrl(string $disk, string $key): ?string
+    protected function resolveDiskUrl(string $disk, string $key): ?string
     {
         $storage = Storage::disk($disk);
 
