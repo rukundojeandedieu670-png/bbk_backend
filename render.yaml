@@ -47,6 +47,18 @@ services:
         sync: false
       - key: AWS_ENDPOINT
         sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_REGION
+        value: auto
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_URL
+        sync: false
       - key: BBK_OWNER_NAME
         value: BBK System Owner
       - key: BBK_OWNER_EMAIL
