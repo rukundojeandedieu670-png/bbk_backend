@@ -11,6 +11,8 @@ class Partner extends \Illuminate\Database\Eloquent\Model
 {
     use HasFactory;
 
+    protected $guarded = [];
+
     public function media(): MorphMany
     {
         return $this->morphMany(MediaAsset::class, 'mediable');

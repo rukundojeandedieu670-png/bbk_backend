@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Hub;
+use App\Models\Partner;
 use App\Models\Program;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,6 +54,54 @@ class CrudAuthorizationTest extends TestCase
         $this->actingAs($publisher, 'sanctum')
             ->deleteJson("/api/v1/admin/content/programs/{$program->id}")
             ->assertOk();
+    }
+
+    public function test_admin_can_create_update_and_delete_a_partner(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::findByName('admin'));
+
+        $created = $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/admin/content/partners', [
+                'name' => 'Greenway Foundation',
+                'logo' => 'https://example.com/logo.png',
+                'websiteUrl' => 'https://greenway.org',
+                'partnerType' => 'funder',
+                'description' => 'Supports youth sports and school access.',
+            ])
+            ->assertCreated()
+            ->json('data');
+
+        $this->assertDatabaseHas('partners', [
+            'id' => $created['id'],
+            'name' => 'Greenway Foundation',
+            'website_url' => 'https://greenway.org',
+            'partner_type' => 'funder',
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->patchJson("/api/v1/admin/content/partners/{$created['id']}", [
+                'name' => 'Greenway Foundation Updated',
+                'websiteUrl' => 'https://updated.greenway.org',
+                'partnerType' => 'implementing_partner',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Greenway Foundation Updated')
+            ->assertJsonPath('data.websiteUrl', 'https://updated.greenway.org')
+            ->assertJsonPath('data.partnerType', 'implementing_partner');
+
+        $this->assertDatabaseHas('partners', [
+            'id' => $created['id'],
+            'name' => 'Greenway Foundation Updated',
+            'website_url' => 'https://updated.greenway.org',
+            'partner_type' => 'implementing_partner',
+        ]);
+
+        $this->actingAs($admin, 'sanctum')
+            ->deleteJson("/api/v1/admin/content/partners/{$created['id']}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('partners', ['id' => $created['id']]);
     }
 
     public function test_all_staff_roles_can_manage_hubs(): void

@@ -32,14 +32,21 @@ class AdminContentController extends Controller
         if ($type === 'hero') $query->orderBy('side')->orderBy('sort_order')->orderBy('id');
         else $query->latest();
 
-        return response()->json(['data' => $query->paginate(25)]);
+        $records = $query->paginate(25);
+
+        if ($type === 'partners') {
+            return response()->json(['data' => PartnerResource::collection($records)]);
+        }
+
+        return response()->json(['data' => $records]);
     }
 
     public function show(Request $request, string $type, int $id): JsonResponse
     {
         $this->authorizeType($request, $type, 'view');
+        $record = $this->model($type)::query()->findOrFail($id);
 
-        return response()->json(['data' => $this->model($type)::query()->findOrFail($id)]);
+        return response()->json(['data' => $this->serializeRecord($type, $record)]);
     }
 
     public function store(Request $request, string $type): JsonResponse
@@ -49,7 +56,7 @@ class AdminContentController extends Controller
         $model = $this->model($type);
         $record = $model::query()->create($data);
 
-        return response()->json(['data' => $record->fresh(), 'message' => 'Content created.'], 201);
+        return response()->json(['data' => $this->serializeRecord($type, $record->fresh()), 'message' => 'Content created.'], 201);
     }
 
     public function update(Request $request, string $type, int $id): JsonResponse
@@ -59,7 +66,7 @@ class AdminContentController extends Controller
         $data = $this->validated($request, $type, $record->id);
         $record->update($data);
 
-        return response()->json(['data' => $record->fresh(), 'message' => 'Content updated.']);
+        return response()->json(['data' => $this->serializeRecord($type, $record->fresh()), 'message' => 'Content updated.']);
     }
 
     public function destroy(Request $request, string $type, int $id): JsonResponse
@@ -136,7 +143,15 @@ class AdminContentController extends Controller
                 'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'hubId' => ['nullable', 'exists:hubs,id'], 'programId' => ['nullable', 'exists:programs,id'], 'eventType' => ['required', 'in:match,concert,screening,workshop,exhibition'], 'location' => ['required', 'string', 'max:255'], 'startsAt' => ['required', 'date'], 'endsAt' => ['nullable', 'date', 'after:startsAt'], 'description' => ['nullable', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'], 'isPublic' => ['nullable', 'boolean'],
             ])),
             'partners' => $this->mapPartner($request->validate([
-                'name' => ['required', 'string', 'max:180'], 'logo' => ['nullable', 'url', 'max:2000'], 'websiteUrl' => ['nullable', 'url', 'max:2000'], 'partnerType' => ['required', 'in:funder,implementing_partner,local_partner'], 'description' => ['nullable', 'string'],
+                'name' => ['required', 'string', 'max:180'],
+                'logo' => ['nullable', 'url', 'max:2000'],
+                'logoUrl' => ['nullable', 'url', 'max:2000'],
+                'logo_url' => ['nullable', 'url', 'max:2000'],
+                'websiteUrl' => ['nullable', 'url', 'max:2000'],
+                'website_url' => ['nullable', 'url', 'max:2000'],
+                'partnerType' => ['nullable', 'in:funder,implementing_partner,local_partner'],
+                'partner_type' => ['nullable', 'in:funder,implementing_partner,local_partner'],
+                'description' => ['nullable', 'string'],
             ])),
             'news' => $this->mapNews($request->validate([
                 'title' => ['required', 'string', 'max:180'], 'slug' => ['nullable', 'string', 'max:180', $slugRule], 'body' => ['required', 'string'], 'coverImage' => ['nullable', 'url', 'max:2000'], 'status' => ['nullable', 'in:draft,pending_review,published,archived'], 'publishedAt' => ['nullable', 'date'],
@@ -154,7 +169,29 @@ class AdminContentController extends Controller
     private function mapProgram(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'category' => $data['category'], 'summary' => $data['summary'] ?? null, 'body' => $data['body'] ?? null, 'cover_image' => $data['coverImage'] ?? null, 'is_featured' => $data['isFeatured'] ?? false, 'status' => $data['status'] ?? 'draft']; }
     private function mapStory(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'program_id' => $data['programId'] ?? null, 'author_name' => $data['authorName'], 'body' => $data['body'], 'status' => $data['status'] ?? 'draft', 'published_at' => $data['publishedAt'] ?? null]; }
     private function mapEvent(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'hub_id' => $data['hubId'] ?? null, 'program_id' => $data['programId'] ?? null, 'event_type' => $data['eventType'], 'location' => $data['location'], 'starts_at' => $data['startsAt'], 'ends_at' => $data['endsAt'] ?? null, 'description' => $data['description'] ?? null, 'cover_image' => $data['coverImage'] ?? null, 'status' => $data['status'] ?? 'draft', 'is_public' => $data['isPublic'] ?? false]; }
-    private function mapPartner(array $data): array { return ['name' => $data['name'], 'logo' => $data['logo'] ?? null, 'website_url' => $data['websiteUrl'] ?? null, 'partner_type' => $data['partnerType'], 'description' => $data['description'] ?? null]; }
+    private function mapPartner(array $data): array
+    {
+        $partnerType = $data['partnerType'] ?? $data['partner_type'] ?? null;
+        $websiteUrl = $data['websiteUrl'] ?? $data['website_url'] ?? null;
+        $logo = $data['logo'] ?? $data['logoUrl'] ?? $data['logo_url'] ?? null;
+
+        return [
+            'name' => $data['name'],
+            'logo' => $logo,
+            'website_url' => $websiteUrl,
+            'partner_type' => $partnerType ?? 'local_partner',
+            'description' => $data['description'] ?? null,
+        ];
+    }
     private function mapNews(array $data): array { return ['title' => $data['title'], 'slug' => $data['slug'] ?? Str::slug($data['title']), 'body' => $data['body'], 'cover_image' => $data['coverImage'] ?? null, 'status' => $data['status'] ?? 'draft', 'published_at' => $data['publishedAt'] ?? null]; }
     private function mapHero(array $data): array { return ['eyebrow' => $data['eyebrow'] ?? null, 'title' => $data['title'], 'body' => $data['body'] ?? null, 'cta_label' => $data['cta_label'] ?? null, 'cta_url' => $data['cta_url'] ?? null, 'image_url' => $data['image_url'] ?? null, 'location' => $data['location'] ?? null, 'side' => $data['side'] ?? 'left', 'sort_order' => $data['sort_order'] ?? 0, 'is_active' => $data['is_active'] ?? true]; }
+
+    private function serializeRecord(string $type, mixed $record): mixed
+    {
+        if ($type === 'partners') {
+            return PartnerResource::make($record);
+        }
+
+        return $record;
+    }
 }
